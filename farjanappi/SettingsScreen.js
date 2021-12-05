@@ -6,8 +6,7 @@ import { Button, ThemeProvider, Text } from 'react-native-elements';
 import { StyleSheet, View, TextInput, FlatList, Modal } from 'react-native';
 
 
-export default function SettingsScreen() {
-
+export default function SettingsScreen({ navigation }) {
   
   const [jmlnick, setJmlnick] = useState('');
   const [settings, setSettings] = useState([]);
@@ -16,20 +15,29 @@ export default function SettingsScreen() {
   const db  = SQLite.openDatabase('taskdb.db');
 
   useEffect(() => {
-    db.transaction(tx => {
-      tx.executeSql('create table if not exists settings (key text, value text);');
-      tx.executeSql('create table if not exists task (id integer primary key not null, task text, done integer, picture text);');
-      tx.executeSql('select * from task;', [], (_, {rows}) => {
-        setTasks(rows._array);
-      }); 
+    const unsubscribe = navigation.addListener('focus', () => {
+        db.transaction(tx => {
+            tx.executeSql('create table if not exists settings (key text, value text);');
+            tx.executeSql('create table if not exists task (id integer primary key not null, task text, done integer, picture text);');
+          }, null, updateTaskList);
+        updateSettings();
     });
-    updateSettings(); 
+    return unsubscribe;
   }, []);
 
   const updateSettings= () =>{
     db.transaction(tx => {
       tx.executeSql('select * from settings;', [], (_, {rows}) =>
         setSettings(rows._array)
+      ); 
+    });
+  }
+
+
+  const updateTaskList= () =>{
+    db.transaction(tx => {
+      tx.executeSql('select * from task;', [], (_, {rows}) =>
+        setTasks(rows._array)
       ); 
     });
   }
@@ -41,12 +49,31 @@ export default function SettingsScreen() {
     }, null, setTasks([]));
   }
 
+  const setUp= () => {
+    db.transaction(tx  => {
+      tx.executeSql('create table if not exists settings (key text, value text);');
+      tx.executeSql('create table if not exists task (id integer primary key not null, task text, done integer, picture text);');
+      tx.executeSql('insert into settings (key, value) values (?, ?);',['nick', jmlnick]);      
+      tx.executeSql('insert into task (task, done) values (?, ?);',['JML+??? = profit', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['AMIGAAAA!!1', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Hytti madness', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Love Färjan', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Bongaa Ville Viikinki', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Kekkonen', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Buffetti ja sit vedetään taas!', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Make a demo about it.', 0]);
+      tx.executeSql('insert into task (task, done) values (?, ?);',['Discoon Discoon!', 0]);
+    }, null, updateSettings);
+    updateTaskList();
+  }
+
   return (
     
     <View style={styles.container}>
       <Text h1>Settings</Text>
       <Text>{tasks.length}</Text>
       <Button onPress={dropDb} title="drop db" />   
+      <Button onPress={setUp} title="set up" />
     </View> 
     
   )
@@ -61,7 +88,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: "20%",
   },
   listcontainer: {
     flexWrap: "wrap",

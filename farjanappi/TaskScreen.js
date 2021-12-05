@@ -6,28 +6,27 @@ import { Button, ThemeProvider, Text } from 'react-native-elements';
 import { StyleSheet, View, TextInput, FlatList, Modal } from 'react-native';
 
 
-export default function TaskScreen() {
+export default function TaskScreen({ navigation }) {
 
   const [picture, setPicture] = useState('');
   const [jmlnick, setJmlnick] = useState('');
   const [tasks, setTasks] = useState([]);
-  const [task, setTask] = useState('');
   const [settings, setSettings] = useState([]);
   
 
   const db  = SQLite.openDatabase('taskdb.db');
 
   useEffect(() => {
-    db.transaction(tx => {
-      tx.executeSql('create table if not exists settings (key text, value text);');
-      tx.executeSql('create table if not exists task (id integer primary key not null, task text, done integer, picture text);');
-      tx.executeSql('select * from task;', [], (_, {rows}) => {
-        setTasks(rows._array);
-      }); 
+    const unsubscribe = navigation.addListener('focus', () => {
+      db.transaction(tx => {
+        tx.executeSql('create table if not exists settings (key text, value text);');
+        tx.executeSql('create table if not exists task (id integer primary key not null, task text, done integer, picture text);');
+      }, null, updateTaskList);
+      updateSettings();
+      updateNick();
     });
-    updateSettings(); 
+    return unsubscribe;
   }, []);
-
 
   const updateTaskList= () =>{
     db.transaction(tx => {
@@ -41,6 +40,14 @@ export default function TaskScreen() {
     db.transaction(tx => {
       tx.executeSql('select * from settings;', [], (_, {rows}) =>
         setSettings(rows._array)
+      ); 
+    });
+  }
+
+  const updateNick= () =>{
+    db.transaction(tx => {
+      tx.executeSql('select value from settings where key=?;', ['nick'], (_, {rows}) =>
+        setJmlnick(rows._array[0].value)
       ); 
     });
   }
@@ -72,33 +79,29 @@ export default function TaskScreen() {
   }
 
 
-
-
-
-
   return (
 
     <View style={styles.container}>
-
-      {(() => {
-          if (tasks.lenght == 0){
+        {(() => {
+          if (tasks.length == 0){
             return (
               <View>
-              <View>
-                <Text>What is your JML nick?</Text>
-                <TextInput 
-                  placeholder='JML nick' 
-                  onChangeText={
-                    jmlnick => setJmlnick(jmlnick)
-                  }
-                  value={jmlnick}
-                /> 
-                <Button onPress={setUp} title="Start färjan experience" />
+                  <Text>What is your JML nick?</Text>
+                  <TextInput 
+                    placeholder='JML nick' 
+                    onChangeText={
+                      jmlnick => setJmlnick(jmlnick)
+                    }
+                    value={jmlnick}
+                  /> 
+                  <Button onPress={setUp} title="Start färjan experience" />
               </View>
-            </View>
             )
           }
-          return     <FlatList
+          return <Text>Make Farjan great again {jmlnick}!</Text>;
+        })()}
+
+      <FlatList
           style={{marginLeft: "5%"}}
           numColumns={3}
           horizontal={false}
@@ -117,10 +120,7 @@ export default function TaskScreen() {
             })()}
           </View>
           }
-        />;
-        })()}
-
-
+        />
     </View>
   )
 }
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: "20%",
   },
   listcontainer: {
     flexWrap: "wrap",
