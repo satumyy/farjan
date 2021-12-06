@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import * as SQLite from 'expo-sqlite';
 import { SafeAreaProvider} from 'react-native-safe-area-context';
 import { Button, ThemeProvider, Text } from 'react-native-elements';
-import { StyleSheet, View, TextInput, FlatList, Modal } from 'react-native';
+import { StyleSheet, View, TextInput } from 'react-native';
 
 
 export default function SettingsScreen({ navigation }) {
+
   
   const [jmlnick, setJmlnick] = useState('');
   const [settings, setSettings] = useState([]);
@@ -25,13 +26,15 @@ export default function SettingsScreen({ navigation }) {
     return unsubscribe;
   }, []);
 
+
+
   const updateSettings= () =>{
     db.transaction(tx => {
       tx.executeSql('select * from settings;', [], (_, {rows}) =>
         setSettings(rows._array)
       ); 
     });
-  }
+  };
 
 
   const updateTaskList= () =>{
@@ -40,14 +43,14 @@ export default function SettingsScreen({ navigation }) {
         setTasks(rows._array)
       ); 
     });
-  }
+  };
 
   const dropDb= () => {
     db.transaction(tx => {
       tx.executeSql('drop table task;');
       tx.executeSql('drop table settings;');
     }, null, setTasks([]));
-  }
+  };
 
   const setUp= () => {
     db.transaction(tx  => {
@@ -65,17 +68,15 @@ export default function SettingsScreen({ navigation }) {
       tx.executeSql('insert into task (task, done) values (?, ?);',['Discoon Discoon!', 0]);
     }, null, updateSettings);
     updateTaskList();
-  }
+  };
 
   return (
-    
     <View style={styles.container}>
       <Text h1>Settings</Text>
       <Text>{tasks.length}</Text>
       <Button onPress={dropDb} title="drop db" />   
       <Button onPress={setUp} title="set up" />
-    </View> 
-    
+    </View>   
   )
 
 }
@@ -88,6 +89,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
+
   },
   listcontainer: {
     flexWrap: "wrap",

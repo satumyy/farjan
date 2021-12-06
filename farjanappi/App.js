@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import { NavigationContainer} from '@react-navigation/native';
-import { createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import SettingsScreen from './SettingsScreen';
 import TaskScreen from './TaskScreen';
 

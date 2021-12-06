@@ -1,19 +1,27 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as SQLite from 'expo-sqlite';
 import { SafeAreaProvider} from 'react-native-safe-area-context';
 import { Button, ThemeProvider, Text } from 'react-native-elements';
-import { StyleSheet, View, TextInput, FlatList, Modal } from 'react-native';
+import { StyleSheet, View, TextInput, FlatList, Image } from 'react-native';
+import{ Camera } from 'expo-camera';
+import { useIsFocused } from '@react-navigation/native';
 
 
 export default function TaskScreen({ navigation }) {
+
+  const isFocused = useIsFocused();
 
   const [picture, setPicture] = useState('');
   const [jmlnick, setJmlnick] = useState('');
   const [tasks, setTasks] = useState([]);
   const [settings, setSettings] = useState([]);
+  const [hasCameraPermission, setPermission] = useState(null);
+  const [photoName, setPhotoName] = useState('');
+  const [photoBase64, setPhotoBase64] = useState('');
   
 
+  const camera= useRef(null);
   const db  = SQLite.openDatabase('taskdb.db');
 
   useEffect(() => {
@@ -24,6 +32,7 @@ export default function TaskScreen({ navigation }) {
       }, null, updateTaskList);
       updateSettings();
       updateNick();
+      askCameraPermission();
     });
     return unsubscribe;
   }, []);
@@ -34,7 +43,7 @@ export default function TaskScreen({ navigation }) {
         setTasks(rows._array)
       ); 
     });
-  }
+  };
 
   const updateSettings= () =>{
     db.transaction(tx => {
@@ -42,7 +51,7 @@ export default function TaskScreen({ navigation }) {
         setSettings(rows._array)
       ); 
     });
-  }
+  };
 
   const updateNick= () =>{
     db.transaction(tx => {
@@ -50,17 +59,19 @@ export default function TaskScreen({ navigation }) {
         setJmlnick(rows._array[0].value)
       ); 
     });
-  }
+  };
 
   const taskDone= (id) => {
+    let picture = photoName;
     db.transaction(tx => {
       tx.executeSql('update task set done=1 where id=(?);',[id]);
+      tx.executeSql('update task set picture=(?) where id=(?);',[picture, id]);
     }, null, updateTaskList);
-  }
+  };
 
   const SendPoints= () => {
 
-  }
+  };
 
   const setUp= () => {
     db.transaction(tx  => {
@@ -76,12 +87,38 @@ export default function TaskScreen({ navigation }) {
       tx.executeSql('insert into task (task, done) values (?, ?);',['Discoon Discoon!', 0]);
     }, null, updateSettings);
     updateTaskList();
-  }
+  };
+
+  const snap= async() => {
+    if (camera) {
+      const photo= await camera.current.takePictureAsync({base64:true});
+      setPhotoName(photo.uri);
+    }
+  };
+
+  
+  const askCameraPermission=  async() => {
+    const {status} = await Camera.requestCameraPermissionsAsync();
+    setPermission( status == 'granted');
+  };
 
 
   return (
 
     <View style={styles.container}>
+      { isFocused && hasCameraPermission ? 
+        ( <View style={{ flex:1 }}>
+            <Camera style={{ flex:4 }} ref ={camera} ratio={'1:1'} />
+          <View>
+            <Button title="Take Photo" onPress={snap} />
+          </View>
+      </View>
+      ) : (
+        <Text>No access to camera</Text>
+      )}
+
+
+
         {(() => {
           if (tasks.length == 0){
             return (
@@ -112,16 +149,22 @@ export default function TaskScreen({ navigation }) {
             {(() => {
               if (item.done == 0){
                 return (
-                  <><Text>{item.task} {item.done}</Text>
+                  <><Text>{item.task} {item.done} {}</Text>
                   <Button onPress={() => taskDone(item.id)} title="tehty"></Button></>
                 )
               }
-              return <Text>{item.task} done!</Text>;
+              return (
+                <View>
+                <Text>{item.task} done!</Text>
+                <Image style={{ width:100, height:100 }} source={{uri : item.picture}} />
+                </View>
+              );
             })()}
           </View>
           }
         />
     </View>
+   
   )
 }
 
